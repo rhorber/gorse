@@ -17,7 +17,8 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/zhenghaoz/gorse/config"
-	"github.com/zhenghaoz/gorse/model/cf"
+	"github.com/zhenghaoz/gorse/model"
+	"github.com/zhenghaoz/gorse/model/ranking"
 	"github.com/zhenghaoz/gorse/storage/cache"
 	"github.com/zhenghaoz/gorse/storage/data"
 	"math/rand"
@@ -46,9 +47,9 @@ func newMockMaster(t *testing.T) *mockMaster {
 	s.cacheStoreServer, err = miniredis.Run()
 	assert.Nil(t, err)
 	// open database
-	s.dataStore, err = data.Open("redis://" + s.dataStoreServer.Addr())
+	s.DataClient, err = data.Open("redis://" + s.dataStoreServer.Addr())
 	assert.Nil(t, err)
-	s.cacheStore, err = cache.Open("redis://" + s.cacheStoreServer.Addr())
+	s.CacheClient, err = cache.Open("redis://" + s.cacheStoreServer.Addr())
 	assert.Nil(t, err)
 	return s
 }
@@ -58,8 +59,8 @@ func TestMaster_CollectLatest(t *testing.T) {
 	m := newMockMaster(t)
 	defer m.Close()
 	// create config
-	m.cfg = &config.Config{}
-	m.cfg.Latest.NumCache = 3
+	m.GorseConfig = &config.Config{}
+	m.GorseConfig.Database.CacheSize = 3
 	// collect latest
 	items := []data.Item{
 		{"0", time.Date(2000, 1, 1, 1, 1, 0, 0, time.UTC), []string{"even"}, ""},
@@ -73,17 +74,29 @@ func TestMaster_CollectLatest(t *testing.T) {
 		{"8", time.Date(2008, 1, 1, 1, 1, 0, 0, time.UTC), []string{"even"}, ""},
 		{"9", time.Date(2009, 1, 1, 1, 1, 0, 0, time.UTC), []string{"odd"}, ""},
 	}
-	m.CollectLatest(items)
+	m.latest(items)
 	// check latest items
-	latest, err := m.cacheStore.GetList(cache.LatestItems, "", 100, 0)
+	latest, err := m.CacheClient.GetScores(cache.LatestItems, "", 0, 100)
 	assert.Nil(t, err)
-	assert.Equal(t, []string{"9", "8", "7"}, latest)
-	latest, err = m.cacheStore.GetList(cache.LatestItems, "even", 100, 0)
+	assert.Equal(t, []cache.ScoredItem{
+		{items[9].ItemId, float32(items[9].Timestamp.Unix())},
+		{items[8].ItemId, float32(items[8].Timestamp.Unix())},
+		{items[7].ItemId, float32(items[7].Timestamp.Unix())},
+	}, latest)
+	latest, err = m.CacheClient.GetScores(cache.LatestItems, "even", 0, 100)
 	assert.Nil(t, err)
-	assert.Equal(t, []string{"8", "6", "4"}, latest)
-	latest, err = m.cacheStore.GetList(cache.LatestItems, "odd", 100, 0)
+	assert.Equal(t, []cache.ScoredItem{
+		{items[8].ItemId, float32(items[8].Timestamp.Unix())},
+		{items[6].ItemId, float32(items[6].Timestamp.Unix())},
+		{items[4].ItemId, float32(items[4].Timestamp.Unix())},
+	}, latest)
+	latest, err = m.CacheClient.GetScores(cache.LatestItems, "odd", 0, 100)
 	assert.Nil(t, err)
-	assert.Equal(t, []string{"9", "7", "5"}, latest)
+	assert.Equal(t, []cache.ScoredItem{
+		{items[9].ItemId, float32(items[9].Timestamp.Unix())},
+		{items[7].ItemId, float32(items[7].Timestamp.Unix())},
+		{items[5].ItemId, float32(items[5].Timestamp.Unix())},
+	}, latest)
 }
 
 func TestMaster_CollectPopItem(t *testing.T) {
@@ -91,9 +104,9 @@ func TestMaster_CollectPopItem(t *testing.T) {
 	m := newMockMaster(t)
 	defer m.Close()
 	// create config
-	m.cfg = &config.Config{}
-	m.cfg.Popular.NumCache = 3
-	m.cfg.Popular.TimeWindow = 365
+	m.GorseConfig = &config.Config{}
+	m.GorseConfig.Database.CacheSize = 3
+	m.GorseConfig.Recommend.PopularWindow = 365
 	// collect latest
 	items := []data.Item{
 		{"0", time.Now(), []string{"even"}, ""},
@@ -128,17 +141,29 @@ func TestMaster_CollectPopItem(t *testing.T) {
 			Timestamp: time.Now().AddDate(-100, 0, 0),
 		})
 	}
-	m.CollectPopItem(items, feedbacks)
+	m.popItem(items, feedbacks)
 	// check popular items
-	popular, err := m.cacheStore.GetList(cache.PopularItems, "", 100, 0)
+	popular, err := m.CacheClient.GetScores(cache.PopularItems, "", 0, 100)
 	assert.Nil(t, err)
-	assert.Equal(t, []string{"9", "8", "7"}, popular)
-	popular, err = m.cacheStore.GetList(cache.PopularItems, "even", 100, 0)
+	assert.Equal(t, []cache.ScoredItem{
+		{ItemId: items[9].ItemId, Score: 10},
+		{ItemId: items[8].ItemId, Score: 9},
+		{ItemId: items[7].ItemId, Score: 8},
+	}, popular)
+	popular, err = m.CacheClient.GetScores(cache.PopularItems, "even", 0, 100)
 	assert.Nil(t, err)
-	assert.Equal(t, []string{"8", "6", "4"}, popular)
-	popular, err = m.cacheStore.GetList(cache.PopularItems, "odd", 100, 0)
+	assert.Equal(t, []cache.ScoredItem{
+		{ItemId: items[8].ItemId, Score: 9},
+		{ItemId: items[6].ItemId, Score: 7},
+		{ItemId: items[4].ItemId, Score: 5},
+	}, popular)
+	popular, err = m.CacheClient.GetScores(cache.PopularItems, "odd", 0, 100)
 	assert.Nil(t, err)
-	assert.Equal(t, []string{"9", "7", "5"}, popular)
+	assert.Equal(t, []cache.ScoredItem{
+		{ItemId: items[9].ItemId, Score: 10},
+		{ItemId: items[7].ItemId, Score: 8},
+		{ItemId: items[5].ItemId, Score: 6},
+	}, popular)
 }
 
 func TestMaster_FitCFModel(t *testing.T) {
@@ -146,9 +171,9 @@ func TestMaster_FitCFModel(t *testing.T) {
 	m := newMockMaster(t)
 	defer m.Close()
 	// create config
-	m.cfg = &config.Config{}
-	m.cfg.Similar.NumCache = 3
-	m.cfg.Master.Jobs = 4
+	m.GorseConfig = &config.Config{}
+	m.GorseConfig.Database.CacheSize = 3
+	m.GorseConfig.Master.FitJobs = 4
 	// collect similar
 	items := []data.Item{
 		{"0", time.Now(), []string{"even"}, ""},
@@ -176,15 +201,15 @@ func TestMaster_FitCFModel(t *testing.T) {
 		}
 	}
 	var err error
-	err = m.dataStore.BatchInsertItem(items)
+	err = m.DataClient.BatchInsertItem(items)
 	assert.Nil(t, err)
-	err = m.dataStore.BatchInsertFeedback(feedbacks, true, true)
+	err = m.DataClient.BatchInsertFeedback(feedbacks, true, true)
 	assert.Nil(t, err)
-	dataset, _, _, err := cf.LoadDataFromDatabase(m.dataStore, []string{"FeedbackType"})
+	dataset, _, _, err := ranking.LoadDataFromDatabase(m.DataClient, []string{"FeedbackType"}, 0, 0)
 	assert.Nil(t, err)
 	// similar items (common users)
-	m.CollectSimilar(items, dataset)
-	similar, err := m.cacheStore.GetList(cache.SimilarItems, "9", 100, 0)
+	m.similar(items, dataset, model.SimilarityDot)
+	similar, err := m.CacheClient.GetScores(cache.SimilarItems, "9", 0, 100)
 	assert.Nil(t, err)
-	assert.Equal(t, []string{"8", "7", "6"}, similar)
+	assert.Equal(t, []string{"8", "7", "6"}, cache.RemoveScores(similar))
 }

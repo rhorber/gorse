@@ -1,4 +1,4 @@
-// Copyright 2020 gorse Project Authors
+// Copyright 2021 gorse Project Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,12 +11,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package data
 
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
+	"fmt"
 	"github.com/go-redis/redis/v8"
 	"github.com/pkg/errors"
 	"github.com/zhenghaoz/gorse/base"
@@ -27,9 +28,10 @@ import (
 	"time"
 )
 
-const (
-	ErrUserNotExist = "user not exist"
-	ErrItemNotExist = "item not exist"
+var (
+	ErrUserNotExist = errors.New("user not exist")
+	ErrItemNotExist = errors.New("item not exist")
+	ErrUnsupported  = fmt.Errorf("unsupported interface")
 )
 
 // Item stores meta data about item.
@@ -55,17 +57,6 @@ type FeedbackKey struct {
 	ItemId       string
 }
 
-func FeedbackKeyFromString(s string) (*FeedbackKey, error) {
-	var feedbackKey FeedbackKey
-	err := json.Unmarshal([]byte(s), &feedbackKey)
-	return &feedbackKey, err
-}
-
-func (k *FeedbackKey) ToString() (string, error) {
-	b, err := json.Marshal(k)
-	return string(b), err
-}
-
 // Feedback stores feedback.
 type Feedback struct {
 	FeedbackKey
@@ -73,28 +64,37 @@ type Feedback struct {
 	Comment   string
 }
 
+// Measurement stores a statistical value.
+type Measurement struct {
+	Name      string
+	Timestamp time.Time
+	Value     float32
+	Comment   string
+}
+
 type Database interface {
 	Init() error
 	Close() error
-	// items
 	InsertItem(item Item) error
 	BatchInsertItem(items []Item) error
 	DeleteItem(itemId string) error
 	GetItem(itemId string) (Item, error)
-	GetItems(cursor string, n int) (string, []Item, error)
-	GetItemFeedback(itemId string, feedbackType *string) ([]Feedback, error)
-	// users
+	GetItems(cursor string, n int, timeLimit *time.Time) (string, []Item, error)
+	GetItemFeedback(itemId string, feedbackTypes ...string) ([]Feedback, error)
 	InsertUser(user User) error
 	DeleteUser(userId string) error
 	GetUser(userId string) (User, error)
 	GetUsers(cursor string, n int) (string, []User, error)
-	GetUserFeedback(userId string, feedbackType *string) ([]Feedback, error)
-	// feedback
-	GetUserItemFeedback(userId, itemId string, feedbackType *string) ([]Feedback, error)
-	DeleteUserItemFeedback(userId, itemId string, feedbackType *string) (int, error)
+	GetUserFeedback(userId string, feedbackTypes ...string) ([]Feedback, error)
+	GetUserItemFeedback(userId, itemId string, feedbackTypes ...string) ([]Feedback, error)
+	DeleteUserItemFeedback(userId, itemId string, feedbackTypes ...string) (int, error)
 	InsertFeedback(feedback Feedback, insertUser, insertItem bool) error
 	BatchInsertFeedback(feedback []Feedback, insertUser, insertItem bool) error
-	GetFeedback(cursor string, n int, feedbackType *string) (string, []Feedback, error)
+	GetFeedback(cursor string, n int, timeLimit *time.Time, feedbackTypes ...string) (string, []Feedback, error)
+	InsertMeasurement(measurement Measurement) error
+	GetMeasurements(name string, n int) ([]Measurement, error)
+	GetClickThroughRate(date time.Time, positiveTypes []string, readType string) (float64, error)
+	CountActiveUsers(date time.Time) (int, error)
 }
 
 const mySQLPrefix = "mysql://"

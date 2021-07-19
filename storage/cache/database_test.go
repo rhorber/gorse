@@ -14,65 +14,109 @@
 package cache
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func testMeta(t *testing.T, db Database) {
 	// Set meta string
-	if err := db.SetString("meta", "1", "2"); err != nil {
-		t.Fatal(err)
-	}
+	err := db.SetString("meta", "1", "2")
+	assert.Nil(t, err)
 	// Get meta string
 	value, err := db.GetString("meta", "1")
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.Nil(t, err)
 	assert.Equal(t, "2", value)
 	// Get meta not existed
 	value, err = db.GetString("meta", "NULL")
-	if err == nil {
-		t.Fatal(err)
-	}
+	assert.ErrorIs(t, err, ErrObjectNotExist)
 	assert.Equal(t, "", value)
 	// Set meta int
-	if err = db.SetInt("meta", "1", 2); err != nil {
-		t.Fatal(err)
-	}
+	err = db.SetInt("meta", "1", 2)
+	assert.Nil(t, err)
 	// Get meta int
-	if value, err := db.GetInt("meta", "1"); err != nil {
-		t.Fatal(err)
-	} else {
-		assert.Equal(t, 2, value)
-	}
+	valInt, err := db.GetInt("meta", "1")
+	assert.Nil(t, err)
+	assert.Equal(t, 2, valInt)
+	// increase meta int
+	err = db.IncrInt("meta", "1")
+	assert.Nil(t, err)
+	valInt, err = db.GetInt("meta", "1")
+	assert.Nil(t, err)
+	assert.Equal(t, 3, valInt)
+	// set meta time
+	err = db.SetTime("meta", "1", time.Date(1996, 4, 8, 0, 0, 0, 0, time.UTC))
+	assert.Nil(t, err)
+	// get meta time
+	valTime, err := db.GetTime("meta", "1")
+	assert.Nil(t, err)
+	assert.Equal(t, 1996, valTime.Year())
+	assert.Equal(t, time.Month(4), valTime.Month())
+	assert.Equal(t, 8, valTime.Day())
 }
 
-func testList(t *testing.T, db Database) {
+func testScores(t *testing.T, db Database) {
 	// Put items
-	items := []string{"0", "1", "2", "3", "4"}
-	err := db.SetList("list", "0", items)
+	items := []ScoredItem{
+		{"0", 0},
+		{"1", 1.1},
+		{"2", 1.2},
+		{"3", 1.3},
+		{"4", 1.4},
+	}
+	err := db.SetScores("list", "0", items)
 	assert.Nil(t, err)
 	// Get items
-	totalItems, err := db.GetList("list", "0", 0, 0)
+	totalItems, err := db.GetScores("list", "0", 0, -1)
 	assert.Nil(t, err)
 	assert.Equal(t, items, totalItems)
 	// Get n items
-	headItems, err := db.GetList("list", "0", 3, 0)
+	headItems, err := db.GetScores("list", "0", 0, 2)
 	assert.Nil(t, err)
 	assert.Equal(t, items[:3], headItems)
 	// Get n items with offset
-	offsetItems, err := db.GetList("list", "0", 3, 1)
+	offsetItems, err := db.GetScores("list", "0", 1, 3)
 	assert.Nil(t, err)
 	assert.Equal(t, items[1:4], offsetItems)
 	// Get empty
-	noItems, err := db.GetList("list", "1", 0, 0)
+	noItems, err := db.GetScores("list", "1", 0, 0)
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(noItems))
 	// test overwrite
-	overwriteItems := []string{"10", "11", "12", "13", "14"}
-	err = db.SetList("list", "0", overwriteItems)
+	overwriteItems := []ScoredItem{
+		{"10", 10.0},
+		{"11", 10.1},
+		{"12", 10.2},
+		{"13", 10.3},
+		{"14", 10.4},
+	}
+	err = db.SetScores("list", "0", overwriteItems)
 	assert.Nil(t, err)
-	totalItems, err = db.GetList("list", "0", 0, 0)
+	totalItems, err = db.GetScores("list", "0", 0, -1)
 	assert.Nil(t, err)
 	assert.Equal(t, overwriteItems, totalItems)
+}
+
+func testList(t *testing.T, db Database) {
+	// append
+	items := []string{"0", "1", "2", "3", "4"}
+	err := db.AppendList("list", "0", items...)
+	assert.Nil(t, err)
+	totalItems, err := db.GetList("list", "0")
+	assert.Nil(t, err)
+	assert.Equal(t, items, totalItems)
+	// append
+	appendItems := []string{"10", "11", "12", "13", "14"}
+	err = db.AppendList("list", "0", appendItems...)
+	assert.Nil(t, err)
+	totalItems, err = db.GetList("list", "0")
+	assert.Nil(t, err)
+	assert.Equal(t, append(items, appendItems...), totalItems)
+	// clear
+	err = db.ClearList("list", "0")
+	assert.Nil(t, err)
+	totalItems, err = db.GetList("list", "0")
+	assert.Nil(t, err)
+	assert.Empty(t, totalItems)
 }

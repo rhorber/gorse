@@ -11,9 +11,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package base
 
 import (
+	"github.com/scylladb/go-set/iset"
 	"math/rand"
 )
 
@@ -64,7 +66,7 @@ func (rng RandomGenerator) UniformMatrix(row, col int, low, high float32) [][]fl
 	return ret
 }
 
-// NewNormalVector makes a vec filled with normal random floats.
+// NormalVector64 makes a vec filled with normal random floats.
 func (rng RandomGenerator) NormalVector64(size int, mean, stdDev float64) []float64 {
 	ret := make([]float64, size)
 	for i := 0; i < len(ret); i++ {
@@ -82,14 +84,14 @@ func (rng RandomGenerator) NormalMatrix64(row, col int, mean, stdDev float64) []
 	return ret
 }
 
-func (rng RandomGenerator) Sample(low, high, n int, exclude ...Set) []int {
+// Sample n values between low and high, but not in exclude.
+func (rng RandomGenerator) Sample(low, high, n int, exclude ...*iset.Set) []int {
 	intervalLength := high - low
-	excludeSet := NewSet()
-	excludeSet.Merge(exclude...)
+	excludeSet := iset.Union(exclude...)
 	sampled := make([]int, 0, n)
-	if n >= intervalLength-excludeSet.Len() {
+	if n >= intervalLength-excludeSet.Size() {
 		for i := low; i < high; i++ {
-			if !excludeSet.Contain(i) {
+			if !excludeSet.Has(i) {
 				sampled = append(sampled, i)
 				excludeSet.Add(i)
 			}
@@ -97,7 +99,7 @@ func (rng RandomGenerator) Sample(low, high, n int, exclude ...Set) []int {
 	} else {
 		for len(sampled) < n {
 			v := rng.Intn(intervalLength) + low
-			if !excludeSet.Contain(v) {
+			if !excludeSet.Has(v) {
 				sampled = append(sampled, v)
 				excludeSet.Add(v)
 			}

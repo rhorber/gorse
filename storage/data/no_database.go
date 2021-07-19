@@ -1,4 +1,4 @@
-// Copyright 2020 gorse Project Authors
+// Copyright 2021 gorse Project Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,82 +11,125 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package data
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
-var NoDatabaseError = fmt.Errorf("no database specified for datastore")
+var ErrNoDatabase = fmt.Errorf("no database specified for datastore")
 
+// NoDatabase means that no database used.
 type NoDatabase struct{}
 
+// Init method of NoDatabase returns ErrNoDatabase.
 func (NoDatabase) Init() error {
-	return NoDatabaseError
+	return ErrNoDatabase
 }
 
+// Close method of NoDatabase returns ErrNoDatabase.
 func (NoDatabase) Close() error {
-	return NoDatabaseError
+	return ErrNoDatabase
 }
 
+// InsertItem method of NoDatabase returns ErrNoDatabase.
 func (NoDatabase) InsertItem(item Item) error {
-	return NoDatabaseError
+	return ErrNoDatabase
 }
 
+// BatchInsertItem method of NoDatabase returns ErrNoDatabase.
 func (NoDatabase) BatchInsertItem(items []Item) error {
-	return NoDatabaseError
+	return ErrNoDatabase
 }
 
+// DeleteItem method of NoDatabase returns ErrNoDatabase.
 func (NoDatabase) DeleteItem(itemId string) error {
-	return NoDatabaseError
+	return ErrNoDatabase
 }
 
+// GetItem method of NoDatabase returns ErrNoDatabase.
 func (NoDatabase) GetItem(itemId string) (Item, error) {
-	return Item{}, NoDatabaseError
+	return Item{}, ErrNoDatabase
 }
 
-func (NoDatabase) GetItems(cursor string, n int) (string, []Item, error) {
-	return "", nil, NoDatabaseError
+// GetItems method of NoDatabase returns ErrNoDatabase.
+func (NoDatabase) GetItems(cursor string, n int, time *time.Time) (string, []Item, error) {
+	return "", nil, ErrNoDatabase
 }
 
-func (NoDatabase) GetItemFeedback(itemId string, feedbackType *string) ([]Feedback, error) {
-	return nil, NoDatabaseError
+// GetItemFeedback method of NoDatabase returns ErrNoDatabase.
+func (NoDatabase) GetItemFeedback(itemId string, feedbackTypes ...string) ([]Feedback, error) {
+	return nil, ErrNoDatabase
 }
 
+// InsertUser method of NoDatabase returns ErrNoDatabase.
 func (NoDatabase) InsertUser(user User) error {
-	return NoDatabaseError
+	return ErrNoDatabase
 }
 
+// DeleteUser method of NoDatabase returns ErrNoDatabase.
 func (NoDatabase) DeleteUser(userId string) error {
-	return NoDatabaseError
+	return ErrNoDatabase
 }
 
+// GetUser method of NoDatabase returns ErrNoDatabase.
 func (NoDatabase) GetUser(userId string) (User, error) {
-	return User{}, NoDatabaseError
+	return User{}, ErrNoDatabase
 }
 
+// GetUsers method of NoDatabase returns ErrNoDatabase.
 func (NoDatabase) GetUsers(cursor string, n int) (string, []User, error) {
-	return "", nil, NoDatabaseError
+	return "", nil, ErrNoDatabase
 }
 
-func (NoDatabase) GetUserFeedback(userId string, feedbackType *string) ([]Feedback, error) {
-	return nil, NoDatabaseError
+// GetUserFeedback method of NoDatabase returns ErrNoDatabase.
+func (NoDatabase) GetUserFeedback(userId string, feedbackTypes ...string) ([]Feedback, error) {
+	return nil, ErrNoDatabase
 }
 
-func (NoDatabase) GetUserItemFeedback(userId, itemId string, feedbackType *string) ([]Feedback, error) {
-	return nil, NoDatabaseError
+// GetUserItemFeedback method of NoDatabase returns ErrNoDatabase.
+func (NoDatabase) GetUserItemFeedback(userId, itemId string, feedbackTypes ...string) ([]Feedback, error) {
+	return nil, ErrNoDatabase
 }
 
-func (NoDatabase) DeleteUserItemFeedback(userId, itemId string, feedbackType *string) (int, error) {
-	return 0, NoDatabaseError
+// DeleteUserItemFeedback method of NoDatabase returns ErrNoDatabase.
+func (NoDatabase) DeleteUserItemFeedback(userId, itemId string, feedbackTypes ...string) (int, error) {
+	return 0, ErrNoDatabase
 }
 
+// InsertFeedback method of NoDatabase returns ErrNoDatabase.
 func (NoDatabase) InsertFeedback(feedback Feedback, insertUser, insertItem bool) error {
-	return NoDatabaseError
+	return ErrNoDatabase
 }
 
+// BatchInsertFeedback method of NoDatabase returns ErrNoDatabase.
 func (NoDatabase) BatchInsertFeedback(feedback []Feedback, insertUser, insertItem bool) error {
-	return NoDatabaseError
+	return ErrNoDatabase
 }
 
-func (NoDatabase) GetFeedback(cursor string, n int, feedbackType *string) (string, []Feedback, error) {
-	return "", nil, NoDatabaseError
+// GetFeedback method of NoDatabase returns ErrNoDatabase.
+func (NoDatabase) GetFeedback(cursor string, n int, time *time.Time, feedbackTypes ...string) (string, []Feedback, error) {
+	return "", nil, ErrNoDatabase
+}
+
+// InsertMeasurement method of NoDatabase returns ErrNoDatabase.
+func (NoDatabase) InsertMeasurement(measurement Measurement) error {
+	return ErrNoDatabase
+}
+
+// GetMeasurements method of NoDatabase returns ErrNoDatabase.
+func (NoDatabase) GetMeasurements(name string, n int) ([]Measurement, error) {
+	return nil, ErrNoDatabase
+}
+
+// GetClickThroughRate method of NoDatabase returns ErrNoDatabase.
+func (NoDatabase) GetClickThroughRate(date time.Time, positiveTypes []string, readType string) (float64, error) {
+	return 0, ErrNoDatabase
+}
+
+// CountActiveUsers method of NoDatabase returns ErrNoDatabase.
+func (NoDatabase) CountActiveUsers(date time.Time) (int, error) {
+	return 0, ErrNoDatabase
 }

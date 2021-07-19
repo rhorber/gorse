@@ -110,3 +110,27 @@ func TestSQLDatabase_DeleteFeedback(t *testing.T) {
 	defer db.Close(t)
 	testDeleteFeedback(t, db.Database)
 }
+
+func TestSQLDatabase_Measurements(t *testing.T) {
+	db := newTestSQLDatabase(t, "TestSQLDatabase_Measurements")
+	defer db.Close(t)
+	testMeasurements(t, db.Database)
+}
+
+func TestSQLDatabase_TimeLimit(t *testing.T) {
+	db := newTestSQLDatabase(t, "TestSQLDatabase_TimeLimit")
+	defer db.Close(t)
+	testTimeLimit(t, db.Database)
+}
+
+func TestSQLDatabase_GetClickThroughRate(t *testing.T) {
+	db := newTestSQLDatabase(t, "TestSQLDatabase_GetClickThroughRate")
+	defer db.Close(t)
+	testGetClickThroughRate(t, db.Database)
+}
+
+func TestSQLDatabase_CountActiveUsers(t *testing.T) {
+	db := newTestSQLDatabase(t, "TestSQLDatabase_CountActiveUsers")
+	defer db.Close(t)
+	testCountActiveUsers(t, db.Database)
+}

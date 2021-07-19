@@ -32,23 +32,27 @@ var masterCommand = &cobra.Command{
 			fmt.Println(version.Name)
 			return
 		}
+		// setup logger
+		debugMode, _ := cmd.PersistentFlags().GetBool("debug")
+		if debugMode {
+			base.SetDevelopmentLogger()
+		}
 		// Start master
 		configPath, _ := cmd.PersistentFlags().GetString("config")
 		base.Logger().Info("load config", zap.String("config", configPath))
-		conf, meta, err := config.LoadConfig(configPath)
+		conf, _, err := config.LoadConfig(configPath)
 		if err != nil {
 			base.Logger().Fatal("failed to load config", zap.Error(err))
 		}
-		l := master.NewMaster(conf, meta)
+		l := master.NewMaster(conf)
 		l.Serve()
 	},
 }
 
 func init() {
+	masterCommand.PersistentFlags().Bool("debug", false, "use debug log mode")
 	masterCommand.PersistentFlags().StringP("config", "c", "/etc/gorse.toml", "configuration file path")
 	masterCommand.PersistentFlags().BoolP("version", "v", false, "gorse version")
-	masterCommand.PersistentFlags().Int("port", 8086, "port of master node")
-	masterCommand.PersistentFlags().String("host", "127.0.0.1", "host of master node")
 }
 
 func main() {

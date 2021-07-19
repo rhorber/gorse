@@ -11,38 +11,75 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package cache
 
-import "fmt"
+import "time"
 
-var NoDatabaseError = fmt.Errorf("no database specified for cachestore")
-
+// NoDatabase means no database used for cache.
 type NoDatabase struct{}
 
+// Close method of NoDatabase returns ErrNoDatabase.
 func (NoDatabase) Close() error {
-	return NoDatabaseError
+	return ErrNoDatabase
 }
 
-func (NoDatabase) SetList(prefix, name string, items []string) error {
-	return NoDatabaseError
+// SetScores method of NoDatabase returns ErrNoDatabase.
+func (NoDatabase) SetScores(prefix, name string, items []ScoredItem) error {
+	return ErrNoDatabase
 }
 
-func (NoDatabase) GetList(prefix, name string, n int, offset int) ([]string, error) {
-	return nil, NoDatabaseError
+// GetScores method of NoDatabase returns ErrNoDatabase.
+func (NoDatabase) GetScores(prefix, name string, begin, end int) ([]ScoredItem, error) {
+	return nil, ErrNoDatabase
 }
 
+// ClearList method of NoDatabase returns ErrNoDatabase.
+func (NoDatabase) ClearList(prefix, name string) error {
+	return ErrNoDatabase
+}
+
+// AppendList method of NoDatabase returns ErrNoDatabase.
+func (NoDatabase) AppendList(prefix, name string, items ...string) error {
+	return ErrNoDatabase
+}
+
+// GetList method of NoDatabase returns ErrNoDatabase.
+func (NoDatabase) GetList(prefix, name string) ([]string, error) {
+	return nil, ErrNoDatabase
+}
+
+// GetString method of NoDatabase returns ErrNoDatabase.
 func (NoDatabase) GetString(prefix, name string) (string, error) {
-	return "", NoDatabaseError
+	return "", ErrNoDatabase
 }
 
-func (NoDatabase) SetString(prefix, name string, val string) error {
-	return NoDatabaseError
+// SetString method of NoDatabase returns ErrNoDatabase.
+func (NoDatabase) SetString(prefix, name, val string) error {
+	return ErrNoDatabase
 }
 
+// GetInt method of NoDatabase returns ErrNoDatabase.
 func (NoDatabase) GetInt(prefix, name string) (int, error) {
-	return 0, NoDatabaseError
+	return 0, ErrNoDatabase
 }
 
+// SetInt method of NoDatabase returns ErrNoDatabase.
 func (NoDatabase) SetInt(prefix, name string, val int) error {
-	return NoDatabaseError
+	return ErrNoDatabase
+}
+
+// GetTime method of NoDatabase returns ErrNoDatabase.
+func (NoDatabase) GetTime(prefix, name string) (time.Time, error) {
+	return time.Time{}, ErrNoDatabase
+}
+
+// SetTime method of NoDatabase returns ErrNoDatabase.
+func (NoDatabase) SetTime(prefix, name string, val time.Time) error {
+	return ErrNoDatabase
+}
+
+// IncrInt method of NoDatabase returns ErrNoDatabase.
+func (NoDatabase) IncrInt(prefix, name string) error {
+	return ErrNoDatabase
 }

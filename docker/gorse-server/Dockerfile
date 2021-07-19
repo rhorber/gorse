@@ -1,13 +1,26 @@
-FROM golang:1.15
+############################
+# STEP 1 build executable binary
+############################
+FROM golang:1.16
 
 ENV GOPROXY=https://goproxy.io,direct
 
-RUN mkdir -p $GOPATH/src/github.com/zhenghaoz && \
-    cd $GOPATH/src/github.com/zhenghaoz && \
-    git clone --depth 1 https://github.com/zhenghaoz/gorse.git && \
-    cd gorse && \
-    cd cmd/gorse-server && \
-    go build . && \
-    mv gorse-server $GOPATH/bin/
+COPY . gorse
 
-ENTRYPOINT ["gorse-server"]
+RUN cd gorse && \
+    go get -v -t -d ./...
+
+RUN cd gorse/cmd/gorse-server && \
+    CGO_ENABLED=0 go build . && \
+    mv gorse-server /usr/bin
+
+############################
+# STEP 2 build a small image
+############################
+FROM scratch
+
+ENV USER root
+
+COPY --from=0 /usr/bin/gorse-server /usr/bin/gorse-server
+
+ENTRYPOINT ["/usr/bin/gorse-server"]
